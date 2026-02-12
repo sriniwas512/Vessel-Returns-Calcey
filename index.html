@@ -1,0 +1,1201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vessel IRR Sensitivity Calculator</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #2E86AB 0%, #1a5276 100%);
+            color: white;
+            padding: 40px 30px;
+            text-align: center;
+            position: relative;
+        }
+
+        .gibson-branding-top {
+            font-size: 0.9em;
+            font-weight: 600;
+            opacity: 0.9;
+            margin-bottom: 15px;
+            letter-spacing: 1px;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+
+        .creator-credit {
+            position: absolute;
+            bottom: 10px;
+            right: 30px;
+            font-size: 0.75em;
+            opacity: 0.7;
+            font-style: italic;
+        }
+
+        .content {
+            display: grid;
+            grid-template-columns: 380px 1fr;
+            gap: 0;
+        }
+
+        .inputs-panel {
+            background: #f8f9fa;
+            padding: 30px;
+            border-right: 2px solid #dee2e6;
+            overflow-y: auto;
+            max-height: calc(100vh - 250px);
+        }
+
+        .chart-panel {
+            padding: 30px;
+            background: white;
+            overflow-y: auto;
+            max-height: calc(100vh - 250px);
+        }
+
+        .input-group {
+            margin-bottom: 25px;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .input-group h3 {
+            color: #2E86AB;
+            margin-bottom: 15px;
+            font-size: 1.1em;
+            border-bottom: 2px solid #2E86AB;
+            padding-bottom: 8px;
+        }
+
+        .input-row {
+            margin-bottom: 15px;
+        }
+
+        .input-row label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 5px;
+            color: #333;
+            font-size: 0.9em;
+        }
+
+        .input-row input {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #dee2e6;
+            border-radius: 6px;
+            font-size: 0.95em;
+            transition: border-color 0.3s;
+        }
+
+        .input-row input:focus {
+            outline: none;
+            border-color: #2E86AB;
+        }
+
+        .input-row small {
+            display: block;
+            color: #6c757d;
+            margin-top: 3px;
+            font-size: 0.85em;
+        }
+
+        .button-group {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .calculate-btn {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, #06a77d 0%, #05855f 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1.1em;
+            font-weight: 700;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .calculate-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(6, 167, 125, 0.4);
+        }
+
+        .download-btn {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, #2E86AB 0%, #1a5276 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1.1em;
+            font-weight: 700;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .download-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(46, 134, 171, 0.4);
+        }
+
+        .results-summary {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+        }
+
+        .result-card {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .result-card h4 {
+            color: #6c757d;
+            font-size: 0.9em;
+            margin-bottom: 8px;
+        }
+
+        .result-card .value {
+            font-size: 1.8em;
+            font-weight: 700;
+            color: #2E86AB;
+        }
+
+        .result-card .value.negative {
+            color: #d62828;
+        }
+
+        .result-card .value.positive {
+            color: #06a77d;
+        }
+
+        .canvas-container {
+            position: relative;
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+        }
+
+        .chart-title {
+            text-align: center;
+            font-size: 1.3em;
+            font-weight: bold;
+            color: #2E86AB;
+            margin-bottom: 15px;
+        }
+
+        canvas {
+            display: block;
+            margin: 0 auto;
+            cursor: crosshair;
+            border: 1px solid #dee2e6;
+            border-radius: 5px;
+        }
+
+        #tooltip {
+            position: absolute;
+            background: rgba(0, 0, 0, 0.9);
+            color: white;
+            padding: 10px;
+            border-radius: 5px;
+            font-size: 0.9em;
+            pointer-events: none;
+            display: none;
+            z-index: 1000;
+        }
+
+        .gibson-watermark {
+            text-align: center;
+            margin-top: 10px;
+        }
+
+        .gibson-watermark img {
+            height: 35px;
+            opacity: 0.8;
+        }
+
+        @media (max-width: 1400px) {
+            .content {
+                grid-template-columns: 1fr;
+            }
+            .inputs-panel {
+                max-height: none;
+                border-right: none;
+                border-bottom: 2px solid #dee2e6;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="gibson-branding-top">GIBSON SHIPBROKERS</div>
+            <h1>⚓ Vessel IRR Sensitivity Calculator</h1>
+            <p>Interactive tool for analyzing levered equity returns on vessel investments</p>
+            <div class="creator-credit">Created by Sriniwas Ghate, S&P Department</div>
+        </div>
+
+        <div class="content">
+            <div class="inputs-panel">
+                <div class="input-group">
+                    <h3>📊 Chart Settings</h3>
+                    <div class="input-row">
+                        <label for="chartTitle">Chart Title</label>
+                        <input type="text" id="chartTitle" value="Non-Eco MR Tanker - IRR Sensitivity Analysis" />
+                    </div>
+                </div>
+
+                <div class="input-group">
+                    <h3>🚢 Vessel Details</h3>
+                    <div class="input-row">
+                        <label for="vesselAge">Current Age (years)</label>
+                        <input type="number" id="vesselAge" value="12" min="0" max="30" />
+                    </div>
+                    <div class="input-row">
+                        <label for="scrapAge">Scrapping Age (years)</label>
+                        <input type="number" id="scrapAge" value="25" min="10" max="40" />
+                    </div>
+                    <div class="input-row">
+                        <label for="scrapValue">Scrap Value ($M)</label>
+                        <input type="number" id="scrapValue" value="4" step="0.5" min="0" />
+                    </div>
+                </div>
+
+                <div class="input-group">
+                    <h3>💰 Purchase & Financing</h3>
+                    <div class="input-row">
+                        <label for="basePurchase">Base Purchase Price ($M)</label>
+                        <input type="number" id="basePurchase" value="26.5" step="0.5" />
+                    </div>
+                    <div class="input-row">
+                        <label for="priceMin">Min Price ($M)</label>
+                        <input type="number" id="priceMin" value="24" step="0.5" />
+                    </div>
+                    <div class="input-row">
+                        <label for="priceMax">Max Price ($M)</label>
+                        <input type="number" id="priceMax" value="29" step="0.5" />
+                    </div>
+                    <div class="input-row">
+                        <label for="equityPct">Equity %</label>
+                        <input type="number" id="equityPct" value="30" min="0" max="100" />
+                    </div>
+                    <div class="input-row">
+                        <label for="interestRate">Interest Rate %</label>
+                        <input type="number" id="interestRate" value="10" step="0.1" min="0" />
+                    </div>
+                    <div class="input-row">
+                        <label for="loanTerm">Loan Term (years)</label>
+                        <input type="number" id="loanTerm" value="5" min="1" max="15" />
+                    </div>
+                </div>
+
+                <div class="input-group">
+                    <h3>⚙️ Operating Costs</h3>
+                    <div class="input-row">
+                        <label for="opex">OPEX ($/day)</label>
+                        <input type="number" id="opex" value="8000" step="100" />
+                    </div>
+                    <div class="input-row">
+                        <label for="opexDays">OPEX Days per Year</label>
+                        <input type="number" id="opexDays" value="365" min="1" max="365" />
+                        <small>Always 365 (vessel runs even during DD/SS)</small>
+                    </div>
+                    <div class="input-row">
+                        <label for="earningDays">TC Earning Days (Normal)</label>
+                        <input type="number" id="earningDays" value="365" min="1" max="365" />
+                        <small>Days earning revenue in normal years</small>
+                    </div>
+                    <div class="input-row">
+                        <label for="offHireDays">Off-Hire Days (DD/SS Years)</label>
+                        <input type="number" id="offHireDays" value="30" min="0" max="90" />
+                        <small>Days without revenue during DD/SS</small>
+                    </div>
+                    <div class="input-row">
+                        <label for="ddCost">Drydocking Cost ($M)</label>
+                        <input type="number" id="ddCost" value="0.65" step="0.05" />
+                    </div>
+                    <div class="input-row">
+                        <label for="ssCost">Special Survey Cost ($M)</label>
+                        <input type="number" id="ssCost" value="1.25" step="0.05" />
+                    </div>
+                </div>
+
+                <div class="input-group">
+                    <h3>💵 TC Rates</h3>
+                    <div class="input-row">
+                        <label for="tcMin">Min TC Rate ($/day)</label>
+                        <input type="number" id="tcMin" value="15000" step="1000" />
+                    </div>
+                    <div class="input-row">
+                        <label for="tcMax">Max TC Rate ($/day)</label>
+                        <input type="number" id="tcMax" value="22000" step="1000" />
+                    </div>
+                    <div class="input-row">
+                        <label for="tcInitialYears">Years at Variable TC</label>
+                        <input type="number" id="tcInitialYears" value="5" min="1" />
+                    </div>
+                    <div class="input-row">
+                        <label for="tcLaterRate">TC Rate After ($/day)</label>
+                        <input type="number" id="tcLaterRate" value="12000" step="1000" />
+                    </div>
+                </div>
+
+                <div class="button-group">
+                    <button class="calculate-btn" onclick="calculateIRR()">
+                        🔥 Calculate IRR
+                    </button>
+                    <button class="download-btn" onclick="downloadPDF()">
+                        📥 Download PDF Report
+                    </button>
+                    <button class="download-btn" onclick="downloadPNG()" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                        📸 Download Chart as PNG
+                    </button>
+                </div>
+            </div>
+
+            <div class="chart-panel">
+                <div class="results-summary" id="results" style="display: none;">
+                    <div class="result-card">
+                        <h4>Base Case IRR</h4>
+                        <div class="value" id="baseIRR">-</div>
+                    </div>
+                    <div class="result-card">
+                        <h4>Max IRR</h4>
+                        <div class="value positive" id="maxIRR">-</div>
+                    </div>
+                    <div class="result-card">
+                        <h4>Min IRR</h4>
+                        <div class="value negative" id="minIRR">-</div>
+                    </div>
+                </div>
+                
+                <div class="canvas-container">
+                    <div class="chart-title" id="chartTitleDisplay"></div>
+                    <canvas id="heatmapCanvas"></canvas>
+                    <div class="gibson-watermark"><img src="data:image/png;base64,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" alt="Gibson Shipbrokers"></div>
+                    <div id="tooltip"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let irrData = null;
+        let priceLabels = [];
+        let tcLabels = [];
+        let currentInputs = null;
+
+        function calculateNPV(rate, cashFlows) {
+            let npv = 0;
+            for (let t = 0; t < cashFlows.length; t++) {
+                npv += cashFlows[t] / Math.pow(1 + rate, t);
+            }
+            return npv;
+        }
+
+        function calculateIRRValue(cashFlows, guess = 0.1) {
+            let rate = guess;
+            const tolerance = 1e-6;
+            const maxIterations = 1000;
+
+            for (let i = 0; i < maxIterations; i++) {
+                const npv = calculateNPV(rate, cashFlows);
+                
+                let npvDerivative = 0;
+                for (let t = 1; t < cashFlows.length; t++) {
+                    npvDerivative -= t * cashFlows[t] / Math.pow(1 + rate, t + 1);
+                }
+
+                if (Math.abs(npv) < tolerance) return rate * 100;
+                if (Math.abs(npvDerivative) < 1e-10) { rate = guess + 0.1; continue; }
+                
+                rate = rate - npv / npvDerivative;
+                if (rate < -0.99) rate = -0.5;
+                else if (rate > 10) rate = 1.0;
+            }
+            return rate * 100;
+        }
+
+        function calculateLoanPayment(principal, annualRate, years) {
+            const rate = annualRate / 100;
+            return principal * (rate * Math.pow(1 + rate, years)) / (Math.pow(1 + rate, years) - 1);
+        }
+
+        function calculateScenarioIRR(inputs, purchasePrice, tcRate) {
+            const equityInvestment = purchasePrice * (inputs.equityPct / 100);
+            const debtAmount = purchasePrice * (1 - inputs.equityPct / 100);
+            const annualDebtService = calculateLoanPayment(debtAmount, inputs.interestRate, inputs.loanTerm);
+            const holdingPeriod = inputs.scrapAge - inputs.vesselAge;
+            const cashFlows = [-equityInvestment];
+
+            for (let year = 1; year <= holdingPeriod; year++) {
+                const vesselAge = inputs.vesselAge + year;
+                const currentTCRate = year <= inputs.tcInitialYears ? tcRate : inputs.tcLaterRate;
+                
+                let capex = 0, offHireDays = 0;
+                if (year !== holdingPeriod) {
+                    if (vesselAge === 15 || vesselAge === 20) { 
+                        capex = inputs.ssCost * 1e6; 
+                        offHireDays = inputs.offHireDays; 
+                    }
+                    else if (year === 3 || year === 6 || year === 11) { 
+                        capex = inputs.ddCost * 1e6; 
+                        offHireDays = inputs.offHireDays; 
+                    }
+                }
+
+                const earningDays = inputs.earningDays - offHireDays;
+                const revenue = currentTCRate * earningDays;
+                const opex = inputs.opex * inputs.opexDays;
+                const debtService = year <= inputs.loanTerm ? annualDebtService : 0;
+                const scrap = year === holdingPeriod ? inputs.scrapValue * 1e6 : 0;
+                const fcf = revenue - opex - capex - debtService + scrap;
+                cashFlows.push(fcf);
+            }
+            return calculateIRRValue(cashFlows);
+        }
+
+        function getColorForIRR(irr, minIRR, maxIRR) {
+            const normalized = (irr - minIRR) / (maxIRR - minIRR);
+            
+            if (normalized < 0.3) {
+                const t = normalized / 0.3;
+                return interpolateColor([214, 40, 40], [247, 127, 0], t);
+            } else if (normalized < 0.5) {
+                const t = (normalized - 0.3) / 0.2;
+                return interpolateColor([247, 127, 0], [252, 191, 73], t);
+            } else if (normalized < 0.7) {
+                const t = (normalized - 0.5) / 0.2;
+                return interpolateColor([252, 191, 73], [144, 190, 109], t);
+            } else if (normalized < 0.85) {
+                const t = (normalized - 0.7) / 0.15;
+                return interpolateColor([144, 190, 109], [67, 170, 139], t);
+            } else {
+                const t = (normalized - 0.85) / 0.15;
+                return interpolateColor([67, 170, 139], [6, 167, 125], t);
+            }
+        }
+
+        function interpolateColor(color1, color2, t) {
+            const r = Math.round(color1[0] + (color2[0] - color1[0]) * t);
+            const g = Math.round(color1[1] + (color2[1] - color1[1]) * t);
+            const b = Math.round(color1[2] + (color2[2] - color1[2]) * t);
+            return `rgb(${r}, ${g}, ${b})`;
+        }
+
+        function drawHeatmap(canvasId, irrMatrix, prices, tcRates, showText = true) {
+            const canvas = document.getElementById(canvasId);
+            const ctx = canvas.getContext('2d');
+            
+            const canvasWidth = 1000;
+            const canvasHeight = 700;
+            canvas.width = canvasWidth;
+            canvas.height = canvasHeight;
+            
+            const marginLeft = 100;
+            const marginRight = 150;
+            const marginTop = 60;
+            const marginBottom = 100;
+            
+            const plotWidth = canvasWidth - marginLeft - marginRight;
+            const plotHeight = canvasHeight - marginTop - marginBottom;
+            
+            const cellWidth = plotWidth / prices.length;
+            const cellHeight = plotHeight / tcRates.length;
+            
+            let minIRR = Infinity, maxIRR = -Infinity;
+            for (let row of irrMatrix) {
+                for (let val of row) {
+                    minIRR = Math.min(minIRR, val);
+                    maxIRR = Math.max(maxIRR, val);
+                }
+            }
+            
+            ctx.fillStyle = 'white';
+            ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+            
+            // Draw cells
+            for (let i = 0; i < tcRates.length; i++) {
+                for (let j = 0; j < prices.length; j++) {
+                    const x = marginLeft + j * cellWidth;
+                    const y = marginTop + (tcRates.length - 1 - i) * cellHeight;
+                    const irr = irrMatrix[i][j];
+                    
+                    ctx.fillStyle = getColorForIRR(irr, minIRR, maxIRR);
+                    ctx.fillRect(x, y, cellWidth, cellHeight);
+                    
+                    ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+                    ctx.lineWidth = 1;
+                    ctx.strokeRect(x, y, cellWidth, cellHeight);
+                    
+                    if (showText) {
+                        ctx.fillStyle = irr < 5 ? 'white' : 'black';
+                        ctx.font = 'bold 11px Arial';
+                        ctx.textAlign = 'center';
+                        ctx.textBaseline = 'middle';
+                        ctx.fillText(irr.toFixed(1) + '%', x + cellWidth/2, y + cellHeight/2);
+                    }
+                }
+            }
+            
+            // Draw axes
+            ctx.strokeStyle = 'black';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(marginLeft, marginTop);
+            ctx.lineTo(marginLeft, marginTop + plotHeight);
+            ctx.lineTo(marginLeft + plotWidth, marginTop + plotHeight);
+            ctx.stroke();
+            
+            // X-axis labels
+            ctx.fillStyle = 'black';
+            ctx.font = '11px Arial';
+            ctx.textAlign = 'center';
+            for (let j = 0; j < prices.length; j++) {
+                const x = marginLeft + j * cellWidth + cellWidth/2;
+                const y = marginTop + plotHeight + 20;
+                ctx.save();
+                ctx.translate(x, y);
+                ctx.rotate(-Math.PI / 4);
+                ctx.fillText(priceLabels[j], 0, 0);
+                ctx.restore();
+            }
+            
+            ctx.font = 'bold 13px Arial';
+            ctx.fillText('Purchase Price', marginLeft + plotWidth/2, canvasHeight - 20);
+            
+            // Y-axis labels
+            ctx.textAlign = 'right';
+            ctx.textBaseline = 'middle';
+            ctx.font = '11px Arial';
+            for (let i = 0; i < tcRates.length; i++) {
+                const x = marginLeft - 10;
+                const y = marginTop + (tcRates.length - 1 - i) * cellHeight + cellHeight/2;
+                ctx.fillText(tcLabels[i], x, y);
+            }
+            
+            // Y-axis title
+            ctx.save();
+            ctx.translate(20, marginTop + plotHeight/2);
+            ctx.rotate(-Math.PI / 2);
+            ctx.font = 'bold 13px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText('Time Charter Rate ($/day)', 0, 0);
+            ctx.restore();
+            
+            // Color bar
+            drawColorBar(ctx, marginLeft + plotWidth + 30, marginTop, 30, plotHeight, minIRR, maxIRR);
+        }
+
+        function drawContourMap(irrMatrix, prices, tcRates) {
+            const canvas = document.getElementById('contourCanvas');
+            const ctx = canvas.getContext('2d');
+            
+            const canvasWidth = 1000;
+            const canvasHeight = 700;
+            canvas.width = canvasWidth;
+            canvas.height = canvasHeight;
+            
+            const marginLeft = 100;
+            const marginRight = 150;
+            const marginTop = 60;
+            const marginBottom = 100;
+            
+            const plotWidth = canvasWidth - marginLeft - marginRight;
+            const plotHeight = canvasHeight - marginTop - marginBottom;
+            
+            let minIRR = Infinity, maxIRR = -Infinity;
+            for (let row of irrMatrix) {
+                for (let val of row) {
+                    minIRR = Math.min(minIRR, val);
+                    maxIRR = Math.max(maxIRR, val);
+                }
+            }
+            
+            ctx.fillStyle = 'white';
+            ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+            
+            // Draw smooth background gradient
+            const cellWidth = plotWidth / prices.length;
+            const cellHeight = plotHeight / tcRates.length;
+            
+            for (let i = 0; i < tcRates.length; i++) {
+                for (let j = 0; j < prices.length; j++) {
+                    const x = marginLeft + j * cellWidth;
+                    const y = marginTop + (tcRates.length - 1 - i) * cellHeight;
+                    const irr = irrMatrix[i][j];
+                    
+                    ctx.fillStyle = getColorForIRR(irr, minIRR, maxIRR);
+                    ctx.fillRect(x, y, cellWidth, cellHeight);
+                }
+            }
+            
+            // Draw contour lines for key IRR levels
+            const contourLevels = [0, 5, 10];
+            const contourColors = ['red', 'blue', 'green'];
+            const contourWidths = [3, 2, 2];
+            
+            for (let c = 0; c < contourLevels.length; c++) {
+                drawContourLine(ctx, irrMatrix, contourLevels[c], marginLeft, marginTop, 
+                               cellWidth, cellHeight, tcRates.length, contourColors[c], contourWidths[c]);
+            }
+            
+            // Draw axes (same as heatmap)
+            ctx.strokeStyle = 'black';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(marginLeft, marginTop);
+            ctx.lineTo(marginLeft, marginTop + plotHeight);
+            ctx.lineTo(marginLeft + plotWidth, marginTop + plotHeight);
+            ctx.stroke();
+            
+            // Labels (same as heatmap)
+            ctx.fillStyle = 'black';
+            ctx.font = '11px Arial';
+            ctx.textAlign = 'center';
+            for (let j = 0; j < prices.length; j++) {
+                const x = marginLeft + j * cellWidth + cellWidth/2;
+                const y = marginTop + plotHeight + 20;
+                ctx.save();
+                ctx.translate(x, y);
+                ctx.rotate(-Math.PI / 4);
+                ctx.fillText(priceLabels[j], 0, 0);
+                ctx.restore();
+            }
+            
+            ctx.font = 'bold 13px Arial';
+            ctx.fillText('Purchase Price', marginLeft + plotWidth/2, canvasHeight - 20);
+            
+            ctx.textAlign = 'right';
+            ctx.textBaseline = 'middle';
+            ctx.font = '11px Arial';
+            for (let i = 0; i < tcRates.length; i++) {
+                const x = marginLeft - 10;
+                const y = marginTop + (tcRates.length - 1 - i) * cellHeight + cellHeight/2;
+                ctx.fillText(tcLabels[i], x, y);
+            }
+            
+            ctx.save();
+            ctx.translate(20, marginTop + plotHeight/2);
+            ctx.rotate(-Math.PI / 2);
+            ctx.font = 'bold 13px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText('Time Charter Rate ($/day)', 0, 0);
+            ctx.restore();
+            
+            // Color bar
+            drawColorBar(ctx, marginLeft + plotWidth + 30, marginTop, 30, plotHeight, minIRR, maxIRR);
+            
+            // Contour legend
+            ctx.font = 'bold 11px Arial';
+            ctx.textAlign = 'left';
+            ctx.fillStyle = 'red';
+            ctx.fillText('— 0% (Break-even)', marginLeft + plotWidth + 80, marginTop + plotHeight - 60);
+            ctx.fillStyle = 'blue';
+            ctx.fillText('— 5% IRR', marginLeft + plotWidth + 80, marginTop + plotHeight - 40);
+            ctx.fillStyle = 'green';
+            ctx.fillText('— 10% IRR', marginLeft + plotWidth + 80, marginTop + plotHeight - 20);
+        }
+
+        function drawContourLine(ctx, matrix, level, marginLeft, marginTop, cellWidth, cellHeight, numRows, color, width) {
+            ctx.strokeStyle = color;
+            ctx.lineWidth = width;
+            ctx.setLineDash([5, 3]);
+            
+            // Simple contour drawing - find cells that cross the threshold
+            for (let i = 0; i < numRows - 1; i++) {
+                for (let j = 0; j < matrix[0].length - 1; j++) {
+                    const v1 = matrix[i][j];
+                    const v2 = matrix[i][j+1];
+                    const v3 = matrix[i+1][j];
+                    const v4 = matrix[i+1][j+1];
+                    
+                    // Check if contour passes through this cell
+                    if ((v1 <= level && (v2 > level || v3 > level || v4 > level)) ||
+                        (v1 > level && (v2 <= level || v3 <= level || v4 <= level))) {
+                        
+                        const x = marginLeft + (j + 0.5) * cellWidth;
+                        const y = marginTop + (numRows - 1 - i - 0.5) * cellHeight;
+                        
+                        ctx.beginPath();
+                        ctx.arc(x, y, 3, 0, 2 * Math.PI);
+                        ctx.fill();
+                    }
+                }
+            }
+            
+            ctx.setLineDash([]);
+        }
+
+        function drawColorBar(ctx, x, y, width, height, minVal, maxVal) {
+            for (let i = 0; i < height; i++) {
+                const val = minVal + (maxVal - minVal) * (1 - i / height);
+                ctx.fillStyle = getColorForIRR(val, minVal, maxVal);
+                ctx.fillRect(x, y + i, width, 1);
+            }
+            
+            ctx.strokeStyle = 'black';
+            ctx.strokeRect(x, y, width, height);
+            
+            ctx.fillStyle = 'black';
+            ctx.font = '11px Arial';
+            ctx.textAlign = 'left';
+            ctx.fillText(maxVal.toFixed(1) + '%', x + width + 5, y);
+            ctx.fillText(minVal.toFixed(1) + '%', x + width + 5, y + height);
+            ctx.fillText(((maxVal + minVal)/2).toFixed(1) + '%', x + width + 5, y + height/2);
+            
+            ctx.save();
+            ctx.translate(x + width + 45, y + height/2);
+            ctx.rotate(-Math.PI / 2);
+            ctx.font = 'bold 12px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText('IRR (%)', 0, 0);
+            ctx.restore();
+        }
+
+        function calculateIRR() {
+            const inputs = {
+                chartTitle: document.getElementById('chartTitle').value,
+                vesselAge: parseFloat(document.getElementById('vesselAge').value),
+                scrapAge: parseFloat(document.getElementById('scrapAge').value),
+                scrapValue: parseFloat(document.getElementById('scrapValue').value),
+                basePurchase: parseFloat(document.getElementById('basePurchase').value),
+                priceMin: parseFloat(document.getElementById('priceMin').value),
+                priceMax: parseFloat(document.getElementById('priceMax').value),
+                equityPct: parseFloat(document.getElementById('equityPct').value),
+                interestRate: parseFloat(document.getElementById('interestRate').value),
+                loanTerm: parseFloat(document.getElementById('loanTerm').value),
+                opex: parseFloat(document.getElementById('opex').value),
+                opexDays: parseFloat(document.getElementById('opexDays').value),
+                earningDays: parseFloat(document.getElementById('earningDays').value),
+                offHireDays: parseFloat(document.getElementById('offHireDays').value),
+                ddCost: parseFloat(document.getElementById('ddCost').value),
+                ssCost: parseFloat(document.getElementById('ssCost').value),
+                tcMin: parseFloat(document.getElementById('tcMin').value),
+                tcMax: parseFloat(document.getElementById('tcMax').value),
+                tcInitialYears: parseFloat(document.getElementById('tcInitialYears').value),
+                tcLaterRate: parseFloat(document.getElementById('tcLaterRate').value)
+            };
+
+            currentInputs = inputs;
+
+            const prices = [];
+            for (let p = inputs.priceMin * 1e6; p <= inputs.priceMax * 1e6; p += 0.5e6) {
+                prices.push(p);
+            }
+
+            const tcRates = [];
+            for (let tc = inputs.tcMin; tc <= inputs.tcMax; tc += 1000) {
+                tcRates.push(tc);
+            }
+
+            const irrMatrix = [];
+            let maxIRR = -Infinity, minIRR = Infinity;
+
+            for (let i = 0; i < tcRates.length; i++) {
+                const row = [];
+                for (let j = 0; j < prices.length; j++) {
+                    const irr = calculateScenarioIRR(inputs, prices[j], tcRates[i]);
+                    row.push(irr);
+                    maxIRR = Math.max(maxIRR, irr);
+                    minIRR = Math.min(minIRR, irr);
+                }
+                irrMatrix.push(row);
+            }
+
+            irrData = irrMatrix;
+            priceLabels = prices.map(p => `$${(p/1e6).toFixed(1)}M`);
+            tcLabels = tcRates.map(tc => `$${(tc/1000).toFixed(0)}k`);
+
+            const basePriceIdx = Math.round((inputs.basePurchase - inputs.priceMin) / 0.5);
+            const baseTCIdx = Math.floor(tcRates.length / 2);
+            const baseIRR = irrMatrix[baseTCIdx][basePriceIdx];
+
+            document.getElementById('results').style.display = 'grid';
+            document.getElementById('baseIRR').textContent = baseIRR.toFixed(2) + '%';
+            document.getElementById('baseIRR').className = 'value ' + (baseIRR >= 0 ? 'positive' : 'negative');
+            document.getElementById('maxIRR').textContent = maxIRR.toFixed(2) + '%';
+            document.getElementById('minIRR').textContent = minIRR.toFixed(2) + '%';
+
+            document.getElementById('chartTitleDisplay').textContent = inputs.chartTitle;
+
+            drawHeatmap('heatmapCanvas', irrMatrix, prices, tcRates, true);
+            
+            setupHoverEffect();
+        }
+
+        function setupHoverEffect() {
+            const canvas = document.getElementById('heatmapCanvas');
+            const tooltip = document.getElementById('tooltip');
+
+            canvas.addEventListener('mousemove', function(e) {
+                const rect = canvas.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+
+                const marginLeft = 100;
+                const marginTop = 60;
+                const plotWidth = 1000 - 100 - 150;
+                const plotHeight = 700 - 60 - 100;
+
+                if (x >= marginLeft && x <= marginLeft + plotWidth && 
+                    y >= marginTop && y <= marginTop + plotHeight) {
+                    
+                    const col = Math.floor((x - marginLeft) / (plotWidth / priceLabels.length));
+                    const row = tcLabels.length - 1 - Math.floor((y - marginTop) / (plotHeight / tcLabels.length));
+
+                    if (row >= 0 && row < irrData.length && col >= 0 && col < irrData[0].length) {
+                        const irr = irrData[row][col];
+                        tooltip.innerHTML = `
+                            <strong>Price:</strong> ${priceLabels[col]}<br>
+                            <strong>TC Rate:</strong> ${tcLabels[row]}<br>
+                            <strong>IRR:</strong> ${irr.toFixed(2)}%
+                        `;
+                        tooltip.style.display = 'block';
+                        tooltip.style.left = (e.clientX + 10) + 'px';
+                        tooltip.style.top = (e.clientY + 10) + 'px';
+                    }
+                } else {
+                    tooltip.style.display = 'none';
+                }
+            });
+
+            canvas.addEventListener('mouseleave', function() {
+                tooltip.style.display = 'none';
+            });
+        }
+
+        function downloadPDF() {
+            if (!irrData || !currentInputs) {
+                alert('Please calculate IRR first!');
+                return;
+            }
+
+            // Better check for jsPDF
+            if (typeof window.jspdf === 'undefined' && typeof jsPDF === 'undefined') {
+                alert('PDF library failed to load. Please refresh the page and try again.\n\nIf this persists, you may need internet connection for the PDF library.');
+                return;
+            }
+
+            try {
+                const { jsPDF } = window.jspdf || { jsPDF: window.jsPDF };
+                const doc = new jsPDF('landscape', 'mm', 'a4');
+            
+            // PAGE 1: CHART
+            doc.setFontSize(18);
+            doc.setTextColor(46, 134, 171);
+            doc.text('Gibson Shipbrokers', 148, 15, { align: 'center' });
+            
+            doc.setFontSize(14);
+            doc.text(currentInputs.chartTitle, 148, 25, { align: 'center' });
+            
+            doc.setFontSize(9);
+            doc.setTextColor(100, 100, 100);
+            doc.text('Generated: ' + new Date().toLocaleDateString(), 148, 32, { align: 'center' });
+            
+            const canvas = document.getElementById('heatmapCanvas');
+            const imgData = canvas.toDataURL('image/png');
+            doc.addImage(imgData, 'PNG', 15, 40, 267, 140);
+            
+            // Get Gibson logo safely
+            let gibsonLogoBase64 = null;
+            try {
+                const logoImg = document.querySelector('.gibson-watermark img');
+                if (logoImg && logoImg.src) {
+                    gibsonLogoBase64 = logoImg.src;
+                    doc.addImage(gibsonLogoBase64, 'PNG', 130, 185, 35, 8);
+                }
+            } catch (e) {
+                console.warn('Could not add Gibson logo:', e);
+            }
+            
+            doc.setFontSize(8);
+            doc.setTextColor(100, 100, 100);
+            const footerText = 'Created by Sri Ghate, S&P Department';
+            doc.text(footerText, 148, 198, { align: 'center' });
+            
+            // PAGE 2: ASSUMPTIONS - TWO COLUMNS
+            doc.addPage();
+            
+            doc.setFontSize(18);
+            doc.setTextColor(46, 134, 171);
+            doc.text('Gibson Shipbrokers', 148, 15, { align: 'center' });
+            
+            doc.setFontSize(16);
+            doc.text('Investment Assumptions', 148, 25, { align: 'center' });
+            
+            doc.setFontSize(10);
+            doc.setTextColor(100, 100, 100);
+            doc.text('Generated: ' + new Date().toLocaleDateString(), 148, 32, { align: 'center' });
+            
+            const lineHeight = 7;
+            const col1X = 20;
+            const col2X = 155;
+            let y1 = 50;
+            let y2 = 50;
+            
+            // LEFT COLUMN - VESSEL DETAILS
+            doc.setFontSize(12);
+            doc.setTextColor(46, 134, 171);
+            doc.setFont(undefined, 'bold');
+            doc.text('VESSEL DETAILS', col1X, y1);
+            y1 += 10;
+            
+            doc.setFontSize(10);
+            doc.setTextColor(0, 0, 0);
+            doc.setFont(undefined, 'normal');
+            doc.text('Current Age:', col1X, y1);
+            doc.text(String(currentInputs.vesselAge) + ' years', col1X + 55, y1);
+            y1 += lineHeight;
+            
+            doc.text('Scrapping Age:', col1X, y1);
+            doc.text(String(currentInputs.scrapAge) + ' years', col1X + 55, y1);
+            y1 += lineHeight;
+            
+            doc.text('Holding Period:', col1X, y1);
+            doc.text(String(currentInputs.scrapAge - currentInputs.vesselAge) + ' years', col1X + 55, y1);
+            y1 += lineHeight;
+            
+            doc.text('Scrap Value:', col1X, y1);
+            doc.text('$' + currentInputs.scrapValue.toFixed(1) + 'M', col1X + 55, y1);
+            y1 += 12;
+            
+            // LEFT COLUMN - FINANCING
+            doc.setFontSize(12);
+            doc.setTextColor(46, 134, 171);
+            doc.setFont(undefined, 'bold');
+            doc.text('FINANCING', col1X, y1);
+            y1 += 10;
+            
+            doc.setFontSize(10);
+            doc.setTextColor(0, 0, 0);
+            doc.setFont(undefined, 'normal');
+            doc.text('Base Purchase Price:', col1X, y1);
+            doc.text(`$${currentInputs.basePurchase.toFixed(1)}M`, col1X + 55, y1);
+            y1 += lineHeight;
+            
+            doc.text('Price Range:', col1X, y1);
+            doc.text(`$${currentInputs.priceMin.toFixed(1)}M - $${currentInputs.priceMax.toFixed(1)}M`, col1X + 55, y1);
+            y1 += lineHeight;
+            
+            doc.text('Equity:', col1X, y1);
+            doc.text(`${currentInputs.equityPct}%`, col1X + 55, y1);
+            y1 += lineHeight;
+            
+            doc.text('Debt:', col1X, y1);
+            doc.text(`${100 - currentInputs.equityPct}%`, col1X + 55, y1);
+            y1 += lineHeight;
+            
+            doc.text('Interest Rate:', col1X, y1);
+            doc.text(`${currentInputs.interestRate}% p.a.`, col1X + 55, y1);
+            y1 += lineHeight;
+            
+            doc.text('Loan Term:', col1X, y1);
+            doc.text(`${currentInputs.loanTerm} years`, col1X + 55, y1);
+            y1 += lineHeight;
+            
+            const debtAmt = currentInputs.basePurchase * (100 - currentInputs.equityPct) / 100;
+            const annualDebt = calculateLoanPayment(debtAmt * 1e6, currentInputs.interestRate, currentInputs.loanTerm);
+            doc.text('Annual Debt Service:', col1X, y1);
+            doc.text(`$${(annualDebt / 1e6).toFixed(2)}M`, col1X + 55, y1);
+            
+            // RIGHT COLUMN - OPERATING COSTS
+            doc.setFontSize(12);
+            doc.setTextColor(46, 134, 171);
+            doc.setFont(undefined, 'bold');
+            doc.text('OPERATING COSTS', col2X, y2);
+            y2 += 10;
+            
+            doc.setFontSize(10);
+            doc.setTextColor(0, 0, 0);
+            doc.setFont(undefined, 'normal');
+            doc.text('OPEX:', col2X, y2);
+            doc.text(`$${currentInputs.opex.toLocaleString()}/day`, col2X + 60, y2);
+            y2 += lineHeight;
+            
+            doc.text('OPEX Days per Year:', col2X, y2);
+            doc.text(`${currentInputs.opexDays} days`, col2X + 60, y2);
+            y2 += lineHeight;
+            
+            doc.text('Annual OPEX:', col2X, y2);
+            doc.text(`$${(currentInputs.opex * currentInputs.opexDays / 1e6).toFixed(2)}M`, col2X + 60, y2);
+            y2 += lineHeight + 2;
+            
+            doc.text('TC Earning Days (Normal):', col2X, y2);
+            doc.text(`${currentInputs.earningDays} days/year`, col2X + 60, y2);
+            y2 += lineHeight;
+            
+            doc.text('Off-Hire Days (DD/SS):', col2X, y2);
+            doc.text(`${currentInputs.offHireDays} days`, col2X + 60, y2);
+            y2 += lineHeight;
+            
+            doc.text('Earning Days in DD/SS Years:', col2X, y2);
+            doc.text(`${currentInputs.earningDays - currentInputs.offHireDays} days`, col2X + 60, y2);
+            y2 += lineHeight + 2;
+            
+            doc.text('Drydocking Cost:', col2X, y2);
+            doc.text(`$${currentInputs.ddCost.toFixed(2)}M`, col2X + 60, y2);
+            y2 += lineHeight;
+            
+            doc.text('Special Survey Cost:', col2X, y2);
+            doc.text(`$${currentInputs.ssCost.toFixed(2)}M`, col2X + 60, y2);
+            y2 += 12;
+            
+            // RIGHT COLUMN - TIME CHARTER RATES
+            doc.setFontSize(12);
+            doc.setTextColor(46, 134, 171);
+            doc.setFont(undefined, 'bold');
+            doc.text('TIME CHARTER RATES', col2X, y2);
+            y2 += 10;
+            
+            doc.setFontSize(10);
+            doc.setTextColor(0, 0, 0);
+            doc.setFont(undefined, 'normal');
+            doc.text('TC Rate Range:', col2X, y2);
+            doc.text(`$${currentInputs.tcMin.toLocaleString()}/day`, col2X + 60, y2);
+            y2 += lineHeight;
+            doc.text('', col2X);
+            doc.text(`to $${currentInputs.tcMax.toLocaleString()}/day`, col2X + 60, y2);
+            y2 += lineHeight;
+            
+            doc.text('Variable Rate Period:', col2X, y2);
+            doc.text(`Years 1-${currentInputs.tcInitialYears}`, col2X + 60, y2);
+            y2 += lineHeight;
+            
+            doc.text('Fixed Rate After:', col2X, y2);
+            doc.text(`$${currentInputs.tcLaterRate.toLocaleString()}/day`, col2X + 60, y2);
+            y2 += lineHeight;
+            doc.text('', col2X);
+            doc.text(`(Years ${currentInputs.tcInitialYears + 1}-${currentInputs.scrapAge - currentInputs.vesselAge})`, col2X + 60, y2);
+            
+            // Summary Results
+            const maxY = Math.max(y1, y2);
+            let yResults = maxY + 15;
+            
+            doc.setFontSize(12);
+            doc.setTextColor(46, 134, 171);
+            doc.setFont(undefined, 'bold');
+            doc.text('SENSITIVITY RESULTS', col1X, yResults);
+            yResults += 10;
+            
+            doc.setFontSize(10);
+            doc.setTextColor(0, 0, 0);
+            doc.setFont(undefined, 'normal');
+            
+            const basePriceIdx = Math.round((currentInputs.basePurchase - currentInputs.priceMin) / 0.5);
+            const baseTCIdx = Math.floor(tcLabels.length / 2);
+            const baseIRR = irrData[baseTCIdx][basePriceIdx];
+            
+            let maxIRR = -Infinity, minIRR = Infinity;
+            for (let row of irrData) {
+                for (let val of row) {
+                    maxIRR = Math.max(maxIRR, val);
+                    minIRR = Math.min(minIRR, val);
+                }
+            }
+            
+            doc.text('Base Case IRR:', col1X, yResults);
+            doc.text(`${baseIRR.toFixed(2)}%`, col1X + 55, yResults);
+            yResults += lineHeight;
+            
+            doc.text('Maximum IRR:', col1X, yResults);
+            doc.text(`${maxIRR.toFixed(2)}%`, col1X + 55, yResults);
+            yResults += lineHeight;
+            
+            doc.text('Minimum IRR:', col1X, yResults);
+            doc.text(`${minIRR.toFixed(2)}%`, col1X + 55, yResults);
+            yResults += lineHeight;
+            
+            doc.text('Total Scenarios:', col1X, yResults);
+            doc.text(`${irrData.length * irrData[0].length}`, col1X + 55, yResults);
+            
+            // Gibson logo and footer on assumptions page
+            if (gibsonLogoBase64) {
+                try {
+                    doc.addImage(gibsonLogoBase64, 'PNG', 130, 185, 35, 8);
+                } catch (e) {
+                    console.warn('Could not add Gibson logo on page 2:', e);
+                }
+            }
+            doc.setFontSize(8);
+            doc.setTextColor(100, 100, 100);
+            doc.text(footerText, 148, 198, { align: 'center' });
+            
+            // Save PDF
+            const filename = `vessel_irr_sensitivity_${new Date().toISOString().split('T')[0]}.pdf`;
+            doc.save(filename);
+            
+            } catch (error) {
+                console.error('PDF generation error:', error);
+                alert('Error generating PDF: ' + error.message + '\n\nPlease try again or check the browser console for details.');
+            }
+        }
+
+        function downloadPNG() {
+            if (!irrData || !currentInputs) {
+                alert('Please calculate IRR first!');
+                return;
+            }
+
+            try {
+                const canvas = document.getElementById('heatmapCanvas');
+                const link = document.createElement('a');
+                link.download = `vessel_irr_sensitivity_${new Date().toISOString().split('T')[0]}.png`;
+                link.href = canvas.toDataURL('image/png');
+                link.click();
+            } catch (error) {
+                alert('Error downloading image: ' + error.message);
+            }
+        }
+
+        window.onload = calculateIRR;
+    </script>
+</body>
+</html>
